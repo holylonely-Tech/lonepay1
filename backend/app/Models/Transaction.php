@@ -29,6 +29,32 @@ class Transaction extends Model
 
     public const TYPE_REVERSAL = 'reversal';
 
+    /**
+     * Every value accepted for `type`, enforced by WalletService before a
+     * transaction is written.
+     *
+     * @var list<string>
+     */
+    public const TYPES = [
+        self::TYPE_FUNDING,
+        self::TYPE_AIRTIME,
+        self::TYPE_DATA,
+        self::TYPE_ELECTRICITY,
+        self::TYPE_CABLE_TV,
+        self::TYPE_EXAM_PIN,
+        self::TYPE_TRANSFER,
+        self::TYPE_REFUND,
+        self::TYPE_FEE,
+        self::TYPE_REVERSAL,
+    ];
+
+    /** Transaction types that increase a wallet balance. */
+    public const CREDIT_TYPES = [
+        self::TYPE_FUNDING,
+        self::TYPE_REFUND,
+        self::TYPE_REVERSAL,
+    ];
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_PROCESSING = 'processing';
@@ -85,5 +111,16 @@ class Transaction extends Model
     public function ledgerEntries(): HasMany
     {
         return $this->hasMany(WalletLedgerEntry::class);
+    }
+
+    /**
+     * Presentation-friendly direction derived from the transaction type. The
+     * authoritative direction is stored on the ledger entry.
+     */
+    public function direction(): string
+    {
+        return in_array($this->type, self::CREDIT_TYPES, true)
+            ? WalletLedgerEntry::DIRECTION_CREDIT
+            : WalletLedgerEntry::DIRECTION_DEBIT;
     }
 }

@@ -52,6 +52,58 @@ matching feature is built:
 - `beneficiaries` - saved recipients for transfers.
 - `roles` / `permissions` - RBAC if admin roles are required.
 
+## Stage 3 wallet accounting (implemented)
+
+Money is never handled as a PHP float. The `App\Support\Money` value object
+holds an exact number of minor units (kobo) and uses BCMath for arithmetic. The
+`decimal(18,2)` columns plus the append-only `wallet_ledger_entries` table remain
+the source of truth.
+
+`App\Services\WalletService` is the only place a balance changes:
+
+- `walletFor(User)` returns the user's NGN wallet, creating it once. The unique
+  `(user_id, currency)` index makes this safe under concurrent requests.
+- `credit(User, Money, idempotencyKey, options)` and
+  `debit(User, Money, idempotencyKey, options)` run inside a DB transaction,
+  lock the wallet row (`lockForUpdate`), append an immutable ledger entry and
+  write a transaction record. A debit that would take the balance below zero
+  throws `InsufficientFundsException` and rolls back **all** related writes.
+- Operations are idempotent: replaying an `idempotency_key` returns the original
+  transaction without applying it twice. Unique indexes on
+  `transactions.idempotency_key`, `transactions.reference` and
+  `wallet_ledger_entries.reference` back this up.
+- Amounts, directions, transaction types, references and idempotency keys are
+  validated server-side before any write.
+
+The service is only callable from trusted server-side code. There is no HTTP
+endpoint that credits or debits a wallet.
+
+### Wallet endpoints (authenticated, Sanctum cookie/session)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/wallet` | Wallet summary: persisted `balance`, `currency`, `status`. |
+| `GET` | `/api/wallet/transactions` | Paginated history. Query: `page`, `per_page` (max 50, default 15). |
+
+Both resolve the wallet through `$request->user()` only. A browser-supplied user
+id is never trusted and one user can never read another user's wallet or
+history. Monetary values are returned as fixed two-decimal strings.
+
+### Future payment webhooks (not implemented)
+
+Wallet credits in later stages must originate from verified payment-provider
+events, never from a browser "payment successful" message. A webhook handler
+must:
+
+1. Verify the provider signature with a secret from the environment using a
+   timing-safe comparison (`hash_equals`) and reject unsigned/unknown requests.
+2. Reject replays by recording each provider event id in a unique
+   `webhook_events` row (deferred table) or by passing the provider event id as
+   the `idempotencyKey` to `WalletService::credit()`.
+3. Apply accounting atomically through `WalletService` so the transaction,
+   ledger entry and balance update either all commit or all roll back.
+4. Respond quickly and idempotently so the provider's retries are safe.
+
 ## Testing
 
 ```

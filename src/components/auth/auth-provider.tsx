@@ -12,7 +12,7 @@ import {
 
 import { fetchCurrentUser, type AuthUser } from "@/lib/auth";
 
-type AuthStatus = "loading" | "authenticated" | "unauthenticated";
+type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "error";
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(next);
       return next;
     } catch {
-      setUser(null);
+      setStatus("error");
       return null;
     }
   }, [setUser]);
@@ -58,8 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => {
+        // A network or server failure is not the same as being signed out:
+        // keep the state unresolved instead of falsely reporting a guest.
         if (active) {
-          setUser(null);
+          setStatus("error");
         }
       });
 

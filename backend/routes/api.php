@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -55,4 +56,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/email/verification-notification', [EmailVerificationController::class, 'send'])
         ->middleware('throttle:verification')
         ->name('verification.send');
+
+    /*
+    |----------------------------------------------------------------------
+    | Wallet
+    |----------------------------------------------------------------------
+    | Read-only for the authenticated user. There is deliberately no public
+    | endpoint that credits or debits a wallet; those operations only exist
+    | on WalletService for trusted server-side code.
+    */
+
+    Route::get('/wallet', [WalletController::class, 'show']);
+    Route::get('/wallet/transactions', [WalletController::class, 'transactions']);
 });

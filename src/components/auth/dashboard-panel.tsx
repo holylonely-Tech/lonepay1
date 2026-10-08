@@ -3,16 +3,18 @@
 import { BadgeCheck, LogOut, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { FormAlert } from "@/components/auth/form-field";
+import { useSignOut } from "@/components/auth/use-sign-out";
 import { Button } from "@/components/ui/button";
-import { logout } from "@/lib/auth";
+import { WalletSection } from "@/components/wallet/wallet-section";
 
 export function DashboardPanel() {
-  const { user, status, setUser } = useAuth();
+  const { user, status, refresh } = useAuth();
+  const { signOut, isSigningOut, error: signOutError } = useSignOut();
   const router = useRouter();
-  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -20,21 +22,26 @@ export function DashboardPanel() {
     }
   }, [status, router]);
 
-  async function handleSignOut() {
-    setIsSigningOut(true);
-
-    try {
-      await logout();
-    } catch {
-      // Even if the API call fails, drop the local session so the UI is safe.
-    } finally {
-      setUser(null);
-      router.replace("/login");
-    }
-  }
-
   if (status === "loading") {
     return <p className="text-sm text-subtle">Loading your account…</p>;
+  }
+
+  if (status === "error") {
+    return (
+      <div className="space-y-5">
+        <FormAlert variant="error">
+          We could not check your session. This usually means the server is
+          unreachable, not that you are signed out.
+        </FormAlert>
+        <button
+          type="button"
+          onClick={() => void refresh()}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
   }
 
   if (!user) {
@@ -81,22 +88,20 @@ export function DashboardPanel() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-surface-raised p-6">
-        <h2 className="text-base font-semibold text-foreground">
-          Your wallet is coming soon
-        </h2>
-        <p className="mt-2 text-sm text-subtle">
-          Wallet funding, airtime, data, and bill payments will appear here once
-          they are enabled for your account.
+      <WalletSection />
+
+      {signOutError ? (
+        <p role="alert" className="text-sm text-error">
+          {signOutError}
         </p>
-      </div>
+      ) : null}
 
       <Button
         type="button"
         variant="secondary"
         size="lg"
         className="w-full"
-        onClick={handleSignOut}
+        onClick={signOut}
         disabled={isSigningOut}
       >
         <LogOut className="size-4" aria-hidden="true" />

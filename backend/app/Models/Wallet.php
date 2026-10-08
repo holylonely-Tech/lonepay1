@@ -8,11 +8,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Wallet extends Model
 {
+    public const CURRENCY_NGN = 'NGN';
+
     public const STATUS_ACTIVE = 'active';
 
     public const STATUS_FROZEN = 'frozen';
 
     public const STATUS_CLOSED = 'closed';
+
+    public function isActive(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
+    }
 
     protected $fillable = [
         'user_id',
@@ -36,5 +43,10 @@ class Wallet extends Model
     public function ledgerEntries(): HasMany
     {
         return $this->hasMany(WalletLedgerEntry::class);
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
     }
 }

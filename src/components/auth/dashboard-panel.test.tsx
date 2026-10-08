@@ -19,6 +19,32 @@ vi.mock("@/lib/auth", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/wallet", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/wallet")>();
+  return {
+    ...actual,
+    fetchWallet: vi.fn().mockResolvedValue({
+      id: 1,
+      currency: "NGN",
+      balance: "0.00",
+      status: "active",
+      updated_at: null,
+    }),
+    fetchWalletTransactions: vi.fn().mockResolvedValue({
+      data: [],
+      links: { first: null, last: null, prev: null, next: null },
+      meta: {
+        current_page: 1,
+        last_page: 1,
+        per_page: 10,
+        total: 0,
+        from: null,
+        to: null,
+      },
+    }),
+  };
+});
+
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { DashboardPanel } from "@/components/auth/dashboard-panel";
 import { fetchCurrentUser, logout } from "@/lib/auth";
@@ -54,6 +80,22 @@ describe("DashboardPanel", () => {
     expect(screen.getByText("Email verified")).toBeInTheDocument();
   });
 
+  it("renders the wallet summary and empty history from the API", async () => {
+    vi.mocked(fetchCurrentUser).mockResolvedValue({
+      id: 1,
+      name: "Ada Obi",
+      email: "ada@example.com",
+      email_verified: true,
+      email_verified_at: null,
+      created_at: null,
+    });
+
+    renderPanel();
+
+    expect(await screen.findByText(/wallet balance/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no transactions yet/i)).toBeInTheDocument();
+  });
+
   it("prompts unverified users to verify their email", async () => {
     vi.mocked(fetchCurrentUser).mockResolvedValue({
       id: 1,
@@ -72,7 +114,7 @@ describe("DashboardPanel", () => {
     ).toBeInTheDocument();
   });
 
-  it("signs the user out and returns to the sign-in page", async () => {
+  it("signs the user out and returns to the home page", async () => {
     vi.mocked(fetchCurrentUser).mockResolvedValue({
       id: 1,
       name: "Ada Obi",
@@ -89,6 +131,6 @@ describe("DashboardPanel", () => {
     await user.click(await screen.findByRole("button", { name: /sign out/i }));
 
     await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
-    expect(router.replace).toHaveBeenCalledWith("/login");
+    expect(router.replace).toHaveBeenCalledWith("/");
   });
 });
