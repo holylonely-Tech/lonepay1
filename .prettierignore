@@ -1,0 +1,9 @@
+# Dependencies / build output
+node_modules
+.next
+out
+build
+coverage
+
+# Laravel API lives in its own subproject with its own tooling (Pint).
+backend
