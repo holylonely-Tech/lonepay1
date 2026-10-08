@@ -1,21 +1,22 @@
 import { Mail, MapPin, Phone } from "lucide-react";
 
 import { Container, Section, SectionHeading } from "@/components/ui/section";
+import { contactInfo } from "@/lib/site";
 
 const contactChannels = [
   {
     id: "phone",
     label: "Phone",
     icon: Phone,
-    value: "09067669513",
-    href: "tel:09067669513",
+    value: contactInfo.supportPhone,
+    href: `tel:${contactInfo.supportPhone}`,
   },
   {
     id: "email",
     label: "Email",
     icon: Mail,
-    value: "holylonely3@gmail.com",
-    href: "mailto:holylonely3@gmail.com",
+    value: contactInfo.supportEmail,
+    href: `mailto:${contactInfo.supportEmail}`,
   },
   {
     id: "location",

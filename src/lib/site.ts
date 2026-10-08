@@ -3,13 +3,27 @@ export type NavLink = {
   href: string;
 };
 
+export type SocialChannel = {
+  label: string;
+  href: string;
+  icon: "Instagram" | "Facebook" | "Twitter" | "Linkedin" | "Youtube";
+};
+
 export const navLinks: NavLink[] = [
   { label: "Services", href: "#services" },
   { label: "How It Works", href: "#how-it-works" },
   { label: "Providers", href: "#providers" },
   { label: "Security", href: "#security" },
   { label: "FAQ", href: "#faq" },
+  { label: "Contact Us", href: "/contact" },
 ];
+
+export const contactInfo = {
+  supportPhone: "09067669513",
+  supportEmail: "holylonely3@gmail.com",
+} as const;
+
+export const socialChannels: SocialChannel[] = [];
 
 export const coreServices = [
   {
