@@ -36,19 +36,14 @@ describe("TrustSection", () => {
     });
   });
 
-  it("renders a clearly fictional demo transaction card", () => {
+  it("shows the transaction security illustration with meaningful alt text", () => {
     render(<TrustSection />);
 
-    expect(screen.getByText("Transaction Successful")).toBeInTheDocument();
     expect(
-      screen.getByText("4820 • 9184 • 5582 • 0194 • 3829"),
+      screen.getByAltText(
+        "Illustration of two people reviewing financial information.",
+      ),
     ).toBeInTheDocument();
-    expect(screen.getByText("LonePay User")).toBeInTheDocument();
-    expect(screen.getByText("₦5,000.00")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Demo transaction — for illustration/i),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Delivered · Just now/i)).toBeInTheDocument();
   });
 
   it("does not make unsupported backend or security guarantees", () => {

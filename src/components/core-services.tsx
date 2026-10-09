@@ -8,9 +8,11 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
+import type { ElementType } from "react";
 
 import { Container, Section, SectionHeading } from "@/components/ui/section";
 import { coreServices } from "@/lib/site";
+import { cn } from "@/lib/utils";
 
 type CoreService = (typeof coreServices)[number];
 
@@ -74,11 +76,18 @@ function ServiceCard({
   );
 }
 
-export function CoreServices() {
+export function CoreServices({
+  className,
+  headingAs = "h2",
+}: {
+  className?: string;
+  headingAs?: ElementType;
+}) {
   return (
-    <Section id="services" className="bg-background sm:py-24">
+    <Section id="services" className={cn("bg-background sm:py-24", className)}>
       <Container>
         <SectionHeading
+          as={headingAs}
           eyebrow="Supported Billers & Utilities"
           title="Designed for everyday Nigerian payments"
           description="Everything you need to stay connected and powered up, backed by direct telecom and utility connections."

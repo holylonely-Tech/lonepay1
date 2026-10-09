@@ -24,7 +24,7 @@ export const exploreLinks: NavLink[] = [
 
 export const navItems: NavItem[] = [
   { label: "Home", href: "/" },
-  { label: "Services", href: "/#services" },
+  { label: "Services", href: "/services" },
   { label: "Explore", children: exploreLinks },
   { label: "Contact Us", href: "/contact" },
 ];

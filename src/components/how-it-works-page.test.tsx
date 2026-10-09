@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { HowItWorksPage } from "@/components/how-it-works-page";
@@ -52,13 +52,36 @@ describe("HowItWorksPage", () => {
       "Track your account activity",
     ];
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(steps.length);
+    const stepsList = screen.getByRole("list", {
+      name: "What you can do today",
+    });
+    expect(within(stepsList).getAllByRole("listitem")).toHaveLength(
+      steps.length,
+    );
 
     steps.forEach((title) => {
       expect(
-        screen.getByRole("heading", { level: 3, name: title }),
+        within(stepsList).getByRole("heading", { level: 3, name: title }),
       ).toBeInTheDocument();
     });
+  });
+
+  it("does not include the account activity section for the homepage", () => {
+    render(<HowItWorksPage />);
+
+    expect(
+      screen.queryByRole("heading", {
+        name: "Keep track of your account activity",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByAltText(
+        "Illustration of a person managing finances on a laptop.",
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Go to your dashboard" }),
+    ).not.toBeInTheDocument();
   });
 
   it("states what is implemented and what is not yet available", () => {

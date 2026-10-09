@@ -87,7 +87,10 @@ export function HowItWorksPage() {
             description="A short, straightforward walkthrough of the account and wallet experience that is currently available."
           />
 
-          <ol className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3">
+          <ol
+            aria-label="What you can do today"
+            className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3"
+          >
             {steps.map(({ step, icon: Icon, title, description }) => (
               <li
                 key={step}
