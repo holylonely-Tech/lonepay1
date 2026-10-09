@@ -12,7 +12,6 @@ $projectRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $url = 'http://lonepay.local/'
 $port = 3000
 $buildIdPath = Join-Path $projectRoot '.next\BUILD_ID'
-$serverProcess = $null
 
 # A freshly rebuilt .next directory can appear newer than the running server by
 # a fraction of a second because of filesystem timestamp granularity, so allow
