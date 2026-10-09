@@ -48,7 +48,7 @@ describe("SiteFooter", () => {
     );
     expect(screen.getByRole("link", { name: "Help Center" })).toHaveAttribute(
       "href",
-      "#faq",
+      "/#faq",
     );
   });
 

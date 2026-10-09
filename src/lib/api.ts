@@ -7,9 +7,16 @@
  * `XSRF-TOKEN` cookie and echo it back in the `X-XSRF-TOKEN` header.
  */
 
-export const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
-).replace(/\/+$/, "");
+/**
+ * API base URL. Empty by default so requests go to the SPA's own origin, which
+ * `next.config.ts` proxies to Laravel (required for Sanctum's first-party
+ * cookie/CSRF flow). Set `NEXT_PUBLIC_API_URL` only when the API genuinely
+ * lives on a different, same-site origin.
+ */
+export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(
+  /\/+$/,
+  "",
+);
 
 export type FieldErrors = Record<string, string[]>;
 

@@ -1,8 +1,15 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AuthUser } from "@/lib/auth";
+import { exploreLinks } from "@/lib/site";
 
 const router = vi.hoisted(() => ({
   push: vi.fn(),
@@ -10,7 +17,12 @@ const router = vi.hoisted(() => ({
   refresh: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => router }));
+const navigation = vi.hoisted(() => ({ pathname: "/" }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => router,
+  usePathname: () => navigation.pathname,
+}));
 
 type MockAuth = {
   user: AuthUser | null;
@@ -62,12 +74,25 @@ function getDrawer(): HTMLElement {
   return drawer;
 }
 
+function getDesktopNav(): HTMLElement {
+  return screen.getByRole("navigation", { name: "Main" });
+}
+
+function getDesktopExploreButton(): HTMLElement {
+  return within(getDesktopNav()).getByRole("button", { name: "Explore" });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  navigation.pathname = "/";
   setAuth("unauthenticated", null);
+  vi.stubGlobal("scrollTo", vi.fn());
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("SiteHeader signed-out state", () => {
   it("shows Sign in and the registration CTA", () => {
@@ -81,40 +106,112 @@ describe("SiteHeader signed-out state", () => {
     expect(
       screen.getByRole("link", { name: "Open Free Account" }),
     ).toHaveAttribute("href", "/register");
-    expect(screen.queryByRole("button", { name: /sign out/i })).toBeNull();
   });
 
-  it("keeps a single Contact Us link in the desktop nav", () => {
+  it("keeps Home, Services and Contact Us as top-level desktop links", () => {
     render(<SiteHeader />);
 
-    const desktopNav = screen.getByRole("navigation", { name: "Main" });
-    const contactLinks = within(desktopNav).getAllByRole("link", {
-      name: "Contact Us",
-    });
-
-    expect(contactLinks).toHaveLength(1);
-    expect(contactLinks[0]).toHaveAttribute("href", "/contact");
-  });
-
-  it("keeps the existing primary navigation links without duplicates", () => {
-    render(<SiteHeader />);
-
-    const desktopNav = screen.getByRole("navigation", { name: "Main" });
+    const desktopNav = getDesktopNav();
     const labels = within(desktopNav)
       .getAllByRole("link")
       .map((link) => link.textContent);
 
-    [
-      "Services",
-      "How It Works",
-      "Providers",
-      "Security",
-      "FAQ",
-      "Contact Us",
-    ].forEach((label) => {
-      expect(labels).toContain(label);
-    });
+    expect(labels).toEqual(["Home", "Services", "Contact Us"]);
+    expect(
+      within(desktopNav).getByRole("link", { name: "Contact Us" }),
+    ).toHaveAttribute("href", "/contact");
     expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  it("exposes an Explore control instead of the four grouped links", () => {
+    render(<SiteHeader />);
+
+    const desktopNav = getDesktopNav();
+    const explore = getDesktopExploreButton();
+
+    expect(explore).toHaveAttribute("aria-haspopup", "menu");
+    expect(explore).toHaveAttribute("aria-expanded", "false");
+
+    ["How It Works", "Providers", "FAQ", "Security"].forEach((label) => {
+      expect(
+        within(desktopNav).queryByRole("link", { name: label }),
+      ).toBeNull();
+    });
+  });
+});
+
+describe("SiteHeader desktop Explore dropdown", () => {
+  it("opens on click and lists the grouped links with their destinations", async () => {
+    const user = userEvent.setup();
+    render(<SiteHeader />);
+
+    const explore = getDesktopExploreButton();
+    expect(explore).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(explore);
+
+    expect(explore).toHaveAttribute("aria-expanded", "true");
+    const menu = await screen.findByRole("menu", { name: "Explore" });
+    const items = within(menu).getAllByRole("menuitem");
+
+    expect(items).toHaveLength(exploreLinks.length);
+    exploreLinks.forEach((link) => {
+      expect(
+        within(menu).getByRole("menuitem", { name: link.label }),
+      ).toHaveAttribute("href", link.href);
+    });
+  });
+
+  it("closes when Escape is pressed and returns focus to the trigger", async () => {
+    const user = userEvent.setup();
+    render(<SiteHeader />);
+
+    const explore = getDesktopExploreButton();
+    await user.click(explore);
+    await screen.findByRole("menu", { name: "Explore" });
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "Explore" })).toBeNull();
+    });
+    expect(explore).toHaveFocus();
+  });
+
+  it("closes when clicking outside of the menu", async () => {
+    const user = userEvent.setup();
+    render(<SiteHeader />);
+
+    await user.click(getDesktopExploreButton());
+    await screen.findByRole("menu", { name: "Explore" });
+
+    await user.click(document.body);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "Explore" })).toBeNull();
+    });
+  });
+
+  it("supports keyboard navigation between the menu items", async () => {
+    const user = userEvent.setup();
+    render(<SiteHeader />);
+
+    const explore = getDesktopExploreButton();
+    explore.focus();
+    await user.keyboard("{ArrowDown}");
+
+    const menu = await screen.findByRole("menu", { name: "Explore" });
+    const items = within(menu).getAllByRole("menuitem");
+
+    await waitFor(() => {
+      expect(items[0]).toHaveFocus();
+    });
+
+    await user.keyboard("{ArrowDown}");
+    expect(items[1]).toHaveFocus();
+
+    await user.keyboard("{ArrowUp}");
+    expect(items[0]).toHaveFocus();
   });
 });
 
@@ -186,6 +283,46 @@ describe("SiteHeader mobile navigation", () => {
     expect(signIn).toHaveAttribute("href", "/login");
 
     await user.click(signIn);
+    expect(getDrawer().hidden).toBe(true);
+  });
+
+  it("expands the Explore group with the same four links", async () => {
+    const user = userEvent.setup();
+    render(<SiteHeader />);
+
+    await user.click(screen.getByRole("button", { name: /open menu/i }));
+    const drawer = getDrawer();
+    const explore = within(drawer).getByRole("button", { name: "Explore" });
+
+    expect(explore).toHaveAttribute("aria-expanded", "false");
+    expect(
+      within(drawer).queryByRole("link", { name: "How It Works" }),
+    ).toBeNull();
+
+    await user.click(explore);
+
+    expect(explore).toHaveAttribute("aria-expanded", "true");
+    exploreLinks.forEach((link) => {
+      expect(
+        within(drawer).getByRole("link", { name: link.label }),
+      ).toHaveAttribute("href", link.href);
+    });
+  });
+
+  it("closes the drawer after selecting an Explore link", async () => {
+    const user = userEvent.setup();
+    render(<SiteHeader />);
+
+    await user.click(screen.getByRole("button", { name: /open menu/i }));
+    const drawer = getDrawer();
+    await user.click(within(drawer).getByRole("button", { name: "Explore" }));
+
+    const providers = within(drawer).getByRole("link", {
+      name: "Providers",
+    });
+    expect(providers).toHaveAttribute("href", "/providers");
+
+    await user.click(providers);
     expect(getDrawer().hidden).toBe(true);
   });
 

@@ -1,8 +1,23 @@
+param(
+    # Headless mode is used by the automatic-startup scheduled task: the server
+    # runs without a console window, its output is written to tools\logs, this
+    # script blocks while the server runs (so Task Scheduler can restart it),
+    # and no browser is opened. The default (no switch) behaviour is unchanged.
+    [switch]$Headless
+)
+
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $url = 'http://lonepay.local/'
 $port = 3000
+$buildIdPath = Join-Path $projectRoot '.next\BUILD_ID'
+$serverProcess = $null
+
+# A freshly rebuilt .next directory can appear newer than the running server by
+# a fraction of a second because of filesystem timestamp granularity, so allow
+# a small tolerance before declaring the running server stale.
+$buildFreshnessToleranceSeconds = 2
 
 function Get-Listener {
     param([int]$LocalPort)
@@ -16,6 +31,66 @@ function Get-Response {
         [hashtable]$Headers = @{}
     )
     Invoke-WebRequest -Uri $Uri -Headers $Headers -UseBasicParsing -TimeoutSec 5
+}
+
+function Test-LonePayOwnedProcess {
+    param([int]$ProcessId)
+
+    $process = Get-CimInstance Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction SilentlyContinue
+    if (-not $process) {
+        return $false
+    }
+
+    # Only a process whose command line references this project may be stopped.
+    $commandLine = [string]$process.CommandLine
+    return $commandLine.IndexOf($projectRoot, [StringComparison]::OrdinalIgnoreCase) -ge 0
+}
+
+function Get-ProcessStartTime {
+    param([int]$ProcessId)
+
+    try {
+        return (Get-Process -Id $ProcessId -ErrorAction Stop).StartTime
+    }
+    catch {
+        try {
+            return (Get-CimInstance Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction Stop).CreationDate
+        }
+        catch {
+            return $null
+        }
+    }
+}
+
+function Test-BuildIsNewerThanServer {
+    param([datetime]$ServerStartTime)
+
+    # next start loads its production build (including the route manifest) when
+    # it boots. If .next was (re)built after the server started, the server is
+    # serving a stale build even though the route files now exist on disk.
+    $buildTime = (Get-Item -LiteralPath $buildIdPath).LastWriteTime
+    return $buildTime -gt $ServerStartTime.AddSeconds($buildFreshnessToleranceSeconds)
+}
+
+function Stop-LonePayServer {
+    param([int]$ProcessId)
+
+    # Re-check ownership immediately before stopping so an unrelated process that
+    # reused the same PID can never be killed.
+    if (-not (Test-LonePayOwnedProcess -ProcessId $ProcessId)) {
+        throw "Refusing to stop PID $ProcessId because it is no longer the verified LonePay server."
+    }
+
+    Stop-Process -Id $ProcessId -Force -ErrorAction Stop
+
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        if (-not (Get-Listener -LocalPort $port)) {
+            return
+        }
+        Start-Sleep -Milliseconds 500
+    }
+
+    throw "Port $port is still in use after stopping the LonePay server (PID $ProcessId)."
 }
 
 try {
@@ -42,17 +117,43 @@ try {
     }
 
     $listener = Get-Listener -LocalPort $port
+    $serverReady = $false
     if ($listener) {
-        $serverProcess = Get-CimInstance Win32_Process -Filter "ProcessId = $($listener.OwningProcess)"
-        $commandLine = [string]$serverProcess.CommandLine
-        if (-not $serverProcess -or $commandLine.IndexOf($projectRoot, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
-            throw "Port $port is occupied by another process (PID $($listener.OwningProcess)). Close that service or change its port; LonePay was not started."
+        $serverPid = $listener.OwningProcess
+
+        if (-not (Test-LonePayOwnedProcess -ProcessId $serverPid)) {
+            throw "Port $port is occupied by another process (PID $serverPid). Close that service or change its port; LonePay was not started."
         }
 
-        Write-Host "Reusing the LonePay server already running on port $port (PID $($listener.OwningProcess))."
+        if (-not (Test-Path -LiteralPath $buildIdPath)) {
+            throw "A LonePay server is running on port $port, but the Next.js production build is missing. Run npm run build from the project root, then retry."
+        }
+
+        $serverStartTime = Get-ProcessStartTime -ProcessId $serverPid
+        $isStale = $true
+        if ($serverStartTime) {
+            $isStale = Test-BuildIsNewerThanServer -ServerStartTime $serverStartTime
+        }
+
+        if (-not $isStale) {
+            Write-Host "Reusing the LonePay server already running on port $port (PID $serverPid); it is serving the current build."
+            $serverReady = $true
+        }
+        else {
+            if ($serverStartTime) {
+                Write-Host "The LonePay server on port $port (PID $serverPid) started before the current build at $buildIdPath."
+            }
+            else {
+                Write-Host "Could not read the start time of the LonePay server on port $port (PID $serverPid); treating it as stale."
+            }
+
+            Write-Host 'Stopping that verified LonePay server and starting a fresh one with the current build...'
+            Stop-LonePayServer -ProcessId $serverPid
+        }
     }
-    else {
-        if (-not (Test-Path -LiteralPath (Join-Path $projectRoot '.next\BUILD_ID'))) {
+
+    if (-not $serverReady) {
+        if (-not (Test-Path -LiteralPath $buildIdPath)) {
             throw 'The Next.js production build is missing. Run npm run build from the project root, then retry.'
         }
 

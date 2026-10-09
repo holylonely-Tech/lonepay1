@@ -3,18 +3,29 @@ export type NavLink = {
   href: string;
 };
 
+export type NavItem = {
+  label: string;
+  href?: string;
+  children?: NavLink[];
+};
+
 export type SocialChannel = {
   label: string;
   href: string;
   icon: "Instagram" | "Facebook" | "Twitter" | "Linkedin" | "Youtube";
 };
 
-export const navLinks: NavLink[] = [
-  { label: "Services", href: "#services" },
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Providers", href: "#providers" },
-  { label: "Security", href: "#security" },
-  { label: "FAQ", href: "#faq" },
+export const exploreLinks: NavLink[] = [
+  { label: "How It Works", href: "/how-it-works" },
+  { label: "Providers", href: "/providers" },
+  { label: "FAQ", href: "/#faq" },
+  { label: "Security", href: "/#security" },
+];
+
+export const navItems: NavItem[] = [
+  { label: "Home", href: "/" },
+  { label: "Services", href: "/#services" },
+  { label: "Explore", children: exploreLinks },
   { label: "Contact Us", href: "/contact" },
 ];
 
@@ -219,27 +230,6 @@ export const examProviders = [
   { name: "NABTEB", desc: "Exam Scratch Card" },
 ];
 
-export const workflowSteps = [
-  {
-    step: "01",
-    title: "Fund your wallet",
-    description:
-      "Transfer to your dedicated LonePay virtual account from any bank app. Your balance reflects in seconds.",
-  },
-  {
-    step: "02",
-    title: "Select service & enter details",
-    description:
-      "Choose your biller. We automatically verify meter numbers, smartcards, and phone numbers before you pay.",
-  },
-  {
-    step: "03",
-    title: "Instant delivery & receipt",
-    description:
-      "Your airtime, data, or 20-digit electricity token is generated immediately on-screen, sent by SMS, and saved in your receipts.",
-  },
-];
-
 export const trustHighlights = [
   {
     title: "Direct Gateway Routing",
@@ -307,11 +297,12 @@ export const footerSections = [
     title: "Company",
     links: [
       { label: "Home", href: "/" },
-      { label: "How LonePay Works", href: "#how-it-works" },
-      { label: "Recharge Calculator", href: "#recharge-calculator" },
-      { label: "Providers", href: "#providers" },
-      { label: "Security", href: "#security" },
-      { label: "FAQ", href: "#faq" },
+      { label: "How It Works", href: "/how-it-works" },
+      { label: "Recharge Calculator", href: "/#recharge-calculator" },
+      { label: "Providers", href: "/providers" },
+      { label: "Security", href: "/#security" },
+      { label: "FAQ", href: "/#faq" },
+      { label: "Contact Us", href: "/contact" },
     ],
   },
   {
@@ -319,7 +310,7 @@ export const footerSections = [
     links: [
       { label: "Create free account", href: "/register" },
       { label: "Sign in", href: "/login" },
-      { label: "Help Center", href: "#faq" },
+      { label: "Help Center", href: "/#faq" },
     ],
   },
 ];
