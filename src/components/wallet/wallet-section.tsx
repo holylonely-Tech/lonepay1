@@ -1,109 +1,22 @@
 "use client";
 
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  RefreshCw,
-  Wallet as WalletIcon,
-} from "lucide-react";
+import { RefreshCw, Wallet as WalletIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { FormAlert } from "@/components/auth/form-field";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { TransactionRow } from "@/components/wallet/transaction-row";
 import {
   fetchWallet,
   fetchWalletTransactions,
   formatNaira,
   type PaginatedTransactions,
   type WalletSummary,
-  type WalletTransaction,
 } from "@/lib/wallet";
 
 const PER_PAGE = 10;
 
-const TYPE_LABELS: Record<string, string> = {
-  funding: "Wallet funding",
-  airtime: "Airtime",
-  data: "Mobile data",
-  electricity: "Electricity",
-  cable_tv: "Cable TV",
-  exam_pin: "Examination pin",
-  transfer: "Transfer",
-  refund: "Refund",
-  fee: "Fee",
-  reversal: "Reversal",
-};
-
-const dateFormatter = new Intl.DateTimeFormat("en-NG", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-
-function typeLabel(type: string): string {
-  return TYPE_LABELS[type] ?? type.replace(/_/g, " ");
-}
-
-function formatDate(value: string | null): string {
-  if (!value) {
-    return "Date unavailable";
-  }
-
-  const date = new Date(value);
-
-  return Number.isNaN(date.getTime())
-    ? "Date unavailable"
-    : dateFormatter.format(date);
-}
-
 type Status = "loading" | "ready" | "error";
-
-function TransactionRow({ transaction }: { transaction: WalletTransaction }) {
-  const isCredit = transaction.direction === "credit";
-
-  return (
-    <li className="flex items-center justify-between gap-4 border-b border-border py-3 last:border-0">
-      <div className="flex min-w-0 items-center gap-3">
-        <span
-          aria-hidden="true"
-          className={cn(
-            "grid size-9 shrink-0 place-items-center rounded-full",
-            isCredit
-              ? "bg-primary-soft text-primary"
-              : "bg-surface text-subtle",
-          )}
-        >
-          {isCredit ? (
-            <ArrowDownLeft className="size-4" />
-          ) : (
-            <ArrowUpRight className="size-4" />
-          )}
-        </span>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground">
-            {typeLabel(transaction.type)}
-          </p>
-          <p className="truncate text-xs text-muted">
-            {formatDate(transaction.created_at)} · {transaction.reference}
-          </p>
-        </div>
-      </div>
-
-      <div className="shrink-0 text-right">
-        <p
-          className={cn(
-            "text-sm font-semibold",
-            isCredit ? "text-primary" : "text-foreground",
-          )}
-        >
-          {isCredit ? "+" : "−"}
-          {formatNaira(transaction.amount)}
-        </p>
-        <p className="text-xs capitalize text-muted">{transaction.status}</p>
-      </div>
-    </li>
-  );
-}
 
 export function WalletSection() {
   const [wallet, setWallet] = useState<WalletSummary | null>(null);

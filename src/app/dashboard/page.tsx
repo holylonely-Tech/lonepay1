@@ -1,17 +1,12 @@
 import type { Metadata } from "next";
 
-import { AuthShell } from "@/components/auth/auth-shell";
-import { DashboardPanel } from "@/components/auth/dashboard-panel";
+import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
 
 export const metadata: Metadata = {
   title: "Dashboard — LonePay",
-  description: "Your LonePay account dashboard.",
+  description: "Your LonePay wallet balance, quick services, and account.",
 };
 
 export default function DashboardPage() {
-  return (
-    <AuthShell title="Your account">
-      <DashboardPanel />
-    </AuthShell>
-  );
+  return <DashboardOverview />;
 }

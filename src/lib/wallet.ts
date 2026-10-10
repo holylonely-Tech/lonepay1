@@ -87,3 +87,39 @@ export function formatNaira(value: string | number): string {
 
   return nairaFormatter.format(Number.isFinite(amount) ? amount : 0);
 }
+
+const TYPE_LABELS: Record<string, string> = {
+  funding: "Wallet funding",
+  airtime: "Airtime",
+  data: "Mobile data",
+  electricity: "Electricity",
+  cable_tv: "Cable TV",
+  exam_pin: "Examination pin",
+  transfer: "Transfer",
+  refund: "Refund",
+  fee: "Fee",
+  reversal: "Reversal",
+};
+
+/** Human-readable label for a transaction type, falling back to the raw code. */
+export function transactionTypeLabel(type: string): string {
+  return TYPE_LABELS[type] ?? type.replace(/_/g, " ");
+}
+
+const dateFormatter = new Intl.DateTimeFormat("en-NG", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+/** Format an ISO timestamp for display, or a placeholder when unavailable. */
+export function formatTransactionDate(value: string | null): string {
+  if (!value) {
+    return "Date unavailable";
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime())
+    ? "Date unavailable"
+    : dateFormatter.format(date);
+}
